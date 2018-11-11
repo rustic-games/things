@@ -1,0 +1,7 @@
+[package]
+name = "things"
+version = "0.0.1"
+authors = ["Jean Mertz <helloworld@rustic.games>"]
+license = "MIT OR Apache-2.0"
+description = "Entity–Component–System library currently in development"
+edition = "2018"
