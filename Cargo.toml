@@ -5,3 +5,9 @@ authors = ["Jean Mertz <helloworld@rustic.games>"]
 license = "MIT OR Apache-2.0"
 description = "Entity–Component–System library currently in development"
 edition = "2018"
+
+[features]
+doc = []
+
+[dev-dependencies]
+anymap = "0.12"

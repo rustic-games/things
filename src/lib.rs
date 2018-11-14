@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "doc", feature(external_doc))]
+
 mod component;
 mod store;
 
