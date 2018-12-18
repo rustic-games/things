@@ -23,7 +23,6 @@ pub trait Store: Sized + Default + core::fmt::Debug {
     /// [`push`]ed into the store.
     ///
     /// [`push`]: Store::push
-    #[cfg_attr(feature = "doc", doc(include = "../doc/examples/store_register.md"))]
     fn register<C: Component>(&mut self);
 
     /// `push` takes an instance of a component type, and adds it to the store.
@@ -32,7 +31,6 @@ pub trait Store: Sized + Default + core::fmt::Debug {
     /// [`register`]ed with the store.
     ///
     /// [`register`]: Store::register
-    #[cfg_attr(feature = "doc", doc(include = "../doc/examples/store_push.md"))]
     fn push<C: Component>(&mut self, component: C) -> Result<(), String>;
 
     /// `accepts` validates that a _type of component_ has been registered with
@@ -41,7 +39,6 @@ pub trait Store: Sized + Default + core::fmt::Debug {
     ///
     /// Note that this is a _type check_. This method does not check if a
     /// specific instance of a component has been added to the store.
-    #[cfg_attr(feature = "doc", doc(include = "../doc/examples/store_accepts.md"))]
     fn accepts<C: Component>(&self) -> bool;
 
     /// `get` returns an immutable slice of all components in the store,
@@ -52,7 +49,6 @@ pub trait Store: Sized + Default + core::fmt::Debug {
     /// are no instances of a registered component type stored.
     ///
     /// [`slice`]: std::slice
-    #[cfg_attr(feature = "doc", doc(include = "../doc/examples/store_get.md"))]
     fn get<C: Component>(&self) -> Option<&[C]>;
 
     /// `get_mut` returns a mutable slice of all components in the store,
@@ -63,7 +59,6 @@ pub trait Store: Sized + Default + core::fmt::Debug {
     /// are no instances of a registered component type stored.
     ///
     /// [`slice`]: std::slice
-    #[cfg_attr(feature = "doc", doc(include = "../doc/examples/store_get_mut.md"))]
     fn get_mut<C: Component>(&mut self) -> Option<&mut [C]>;
 }
 
