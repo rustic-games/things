@@ -15,7 +15,7 @@ use core::fmt::Debug;
 ///
 /// [s]: https://en.wikipedia.org/wiki/AOS_and_SOA
 pub trait Store: Sized + Default + Debug {
-    type C: Component;
+    type Item: Component;
 
     /// `new` initialises a new (empty) store.
     fn new() -> Self;
@@ -25,7 +25,7 @@ pub trait Store: Sized + Default + Debug {
     /// The `usize` value returned by the method indicates the position in the
     /// store at which the component is stored. This can be used to later
     /// retrieve a specific component from the store.
-    fn push(&mut self, component: Self::C) -> usize;
+    fn push(&mut self, component: Self::Item) -> usize;
 }
 
 #[cfg(test)]
@@ -41,10 +41,10 @@ mod tests {
 
     #[rustfmt::skip]
     impl<C: Component> Store for ComponentStore<C> {
-        type C = C;
+        type Item = C;
 
         fn new() -> Self { ComponentStore(PhantomData) }
-        fn push(&mut self, _: C) -> usize { 0 }
+        fn push(&mut self, _: Self::Item) -> usize { 0 }
      }
 
     #[rustfmt::skip]
