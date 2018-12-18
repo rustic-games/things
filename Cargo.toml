@@ -9,5 +9,3 @@ edition = "2018"
 [features]
 doc = []
 
-[dev-dependencies]
-anymap = "0.12"
