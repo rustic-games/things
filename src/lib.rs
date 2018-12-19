@@ -18,9 +18,10 @@
 mod component;
 mod store;
 
-use crate::component::ComponentCollection;
 pub use crate::{component::Component, store::Store};
+use crate::{component::ComponentCollection, store::ComponentStore};
 use generational_arena::Arena;
+use std::{any::TypeId, collections::HashMap};
 
 /// Things is the top-level object used to interact with an instance of the ECS
 /// functionality.
@@ -28,6 +29,11 @@ pub struct Things {
     /// entities are stored in a generational index, using the
     /// `generational-arena` crate.
     entities: Arena<()>,
+
+    /// component_stores is a map of stores, one store for each component type.
+    /// The type ID of each component is used as the key of the map, to allow
+    /// linking the components back to the entity.
+    component_stores: HashMap<TypeId, Box<ComponentStore>>,
 }
 
 impl Default for Things {
@@ -40,6 +46,12 @@ impl Things {
     pub fn new() -> Self {
         Things {
             entities: Arena::new(),
+            component_stores: HashMap::new(),
         }
+    }
+
+    pub fn create_entity<CC: ComponentCollection>(&mut self, components: CC) {
+        self.entities.insert(());
+        components.store(&mut self.component_stores);
     }
 }

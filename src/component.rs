@@ -1,4 +1,6 @@
+use crate::store::{ComponentStore, DefaultStore, Store};
 use core::fmt::Debug;
+use std::{any::TypeId, collections::HashMap};
 
 /// The `Component` trait is a marker trait that allows any object implementing
 /// it to be stored in a component store.
@@ -10,10 +12,50 @@ impl<T> Component for T where T: 'static + Debug {}
 
 /// A collection of one or more components should implement this trait to be
 /// able to manipulate each individual component, or store them for later use.
-pub trait ComponentCollection {}
+pub trait ComponentCollection {
+    fn store(self, stores: &mut HashMap<TypeId, Box<ComponentStore>>);
+}
 
-impl<A: Component> ComponentCollection for (A,) {}
-impl<A: Component, B: Component> ComponentCollection for (A, B) {}
+impl<A> ComponentCollection for (A,)
+where
+    A: Component,
+{
+    fn store(self, stores: &mut HashMap<TypeId, Box<ComponentStore>>) {
+        let id_a = TypeId::of::<A>();
+
+        stores
+            .entry(id_a)
+            .or_insert_with(|| Box::new(DefaultStore::<A>::default()))
+            .as_store_mut::<A>()
+            .unwrap()
+            .push(self.0);
+    }
+}
+
+impl<A, B> ComponentCollection for (A, B)
+where
+    A: Component,
+    B: Component,
+{
+    fn store(self, stores: &mut HashMap<TypeId, Box<ComponentStore>>) {
+        let id_a = TypeId::of::<A>();
+        let id_b = TypeId::of::<B>();
+
+        stores
+            .entry(id_a)
+            .or_insert_with(|| Box::new(DefaultStore::<A>::default()))
+            .as_store_mut::<A>()
+            .unwrap()
+            .push(self.0);
+
+        stores
+            .entry(id_b)
+            .or_insert_with(|| Box::new(DefaultStore::<B>::default()))
+            .as_store_mut::<B>()
+            .unwrap()
+            .push(self.1);
+    }
+}
 
 #[cfg(test)]
 mod tests {
