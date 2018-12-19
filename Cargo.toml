@@ -9,3 +9,5 @@ edition = "2018"
 [features]
 doc = []
 
+[dependencies]
+downcast-rs = "1.0.3"
