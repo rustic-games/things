@@ -10,4 +10,5 @@ edition = "2018"
 doc = []
 
 [dependencies]
+generational-arena = "0.2"
 downcast-rs = "1.0.3"

@@ -20,3 +20,26 @@ mod store;
 
 use crate::component::ComponentCollection;
 pub use crate::{component::Component, store::Store};
+use generational_arena::Arena;
+
+/// Things is the top-level object used to interact with an instance of the ECS
+/// functionality.
+pub struct Things {
+    /// entities are stored in a generational index, using the
+    /// `generational-arena` crate.
+    entities: Arena<()>,
+}
+
+impl Default for Things {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Things {
+    pub fn new() -> Self {
+        Things {
+            entities: Arena::new(),
+        }
+    }
+}
