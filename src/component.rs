@@ -13,22 +13,27 @@ impl<T> Component for T where T: 'static + Debug {}
 /// A collection of one or more components should implement this trait to be
 /// able to manipulate each individual component, or store them for later use.
 pub trait ComponentCollection {
-    fn store(self, stores: &mut HashMap<TypeId, Box<ComponentStore>>);
+    fn store(self, stores: &mut HashMap<TypeId, Box<ComponentStore>>) -> Vec<(TypeId, usize)>;
 }
 
 impl<A> ComponentCollection for (A,)
 where
     A: Component,
 {
-    fn store(self, stores: &mut HashMap<TypeId, Box<ComponentStore>>) {
+    fn store(self, stores: &mut HashMap<TypeId, Box<ComponentStore>>) -> Vec<(TypeId, usize)> {
+        let mut references = Vec::new();
         let id_a = TypeId::of::<A>();
 
-        stores
+        let position = stores
             .entry(id_a)
             .or_insert_with(|| Box::new(DefaultStore::<A>::default()))
             .as_store_mut::<A>()
             .unwrap()
             .push(self.0);
+
+        references.push((id_a, position));
+
+        references
     }
 }
 
@@ -37,23 +42,30 @@ where
     A: Component,
     B: Component,
 {
-    fn store(self, stores: &mut HashMap<TypeId, Box<ComponentStore>>) {
+    fn store(self, stores: &mut HashMap<TypeId, Box<ComponentStore>>) -> Vec<(TypeId, usize)> {
+        let mut references = Vec::new();
         let id_a = TypeId::of::<A>();
         let id_b = TypeId::of::<B>();
 
-        stores
+        let position = stores
             .entry(id_a)
             .or_insert_with(|| Box::new(DefaultStore::<A>::default()))
             .as_store_mut::<A>()
             .unwrap()
             .push(self.0);
 
-        stores
+        references.push((id_a, position));
+
+        let position = stores
             .entry(id_b)
             .or_insert_with(|| Box::new(DefaultStore::<B>::default()))
             .as_store_mut::<B>()
             .unwrap()
             .push(self.1);
+
+        references.push((id_b, position));
+
+        references
     }
 }
 
