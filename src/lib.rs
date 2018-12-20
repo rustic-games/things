@@ -16,11 +16,12 @@
 #![cfg_attr(feature = "doc", feature(external_doc))]
 
 mod component;
+mod entity;
 mod store;
 
-pub use crate::{component::Component, store::Store};
+pub use crate::{component::Component, entity::Entity, store::Store};
 use crate::{component::ComponentCollection, store::ComponentStore};
-use generational_arena::{Arena, Index};
+use generational_arena::Arena;
 use rustc_hash::FxHashMap as HashMap;
 use std::any::TypeId;
 
@@ -39,7 +40,7 @@ pub struct Things {
     /// entity_component_references is a map of component locations, as they
     /// relate to an entity. This map allows finding all components belonging to
     /// a single entity.
-    entity_component_references: HashMap<Index, Vec<(TypeId, usize)>>,
+    entity_component_references: HashMap<Entity, Vec<(TypeId, usize)>>,
 }
 
 impl Default for Things {
@@ -58,9 +59,9 @@ impl Things {
     }
 
     pub fn create_entity<CC: ComponentCollection>(&mut self, components: CC) {
-        let index = self.entities.insert(());
+        let entity = Entity::from(self.entities.insert(()));
         let references = components.store(&mut self.component_stores);
 
-        self.entity_component_references.insert(index, references);
+        self.entity_component_references.insert(entity, references);
     }
 }
