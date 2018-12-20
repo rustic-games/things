@@ -18,8 +18,12 @@
 mod component;
 mod entity;
 mod store;
+mod system;
 
-pub use crate::{component::Component, entity::Entity, store::Store};
+pub use crate::{component::Component,
+                entity::Entity,
+                store::Store,
+                system::{Join, Read, System, Write}};
 use crate::{component::ComponentCollection, store::ComponentStore};
 use generational_arena::Arena;
 use rustc_hash::FxHashMap as HashMap;
