@@ -1,6 +1,7 @@
 use crate::store::{ComponentStore, DefaultStore, Store};
 use core::fmt::Debug;
-use std::{any::TypeId, collections::HashMap};
+use rustc_hash::FxHashMap as HashMap;
+use std::any::TypeId;
 
 /// The `Component` trait is a marker trait that allows any object implementing
 /// it to be stored in a component store.

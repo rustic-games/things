@@ -21,7 +21,8 @@ mod store;
 pub use crate::{component::Component, store::Store};
 use crate::{component::ComponentCollection, store::ComponentStore};
 use generational_arena::{Arena, Index};
-use std::{any::TypeId, collections::HashMap};
+use rustc_hash::FxHashMap as HashMap;
+use std::any::TypeId;
 
 /// Things is the top-level object used to interact with an instance of the ECS
 /// functionality.
@@ -51,8 +52,8 @@ impl Things {
     pub fn new() -> Self {
         Things {
             entities: Arena::new(),
-            component_stores: HashMap::new(),
-            entity_component_references: HashMap::new(),
+            component_stores: HashMap::default(),
+            entity_component_references: HashMap::default(),
         }
     }
 
