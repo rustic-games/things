@@ -37,7 +37,7 @@ impl ComponentStore {
         self.downcast_ref::<DefaultStore<C>>()
     }
 
-    pub fn as_store_mut<C: Component>(&mut self) -> Option<&mut DefaultStore<C>> {
+    pub fn as_mut_store<C: Component>(&mut self) -> Option<&mut DefaultStore<C>> {
         self.downcast_mut::<DefaultStore<C>>()
     }
 }

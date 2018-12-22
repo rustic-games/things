@@ -30,7 +30,7 @@ where
         let position = stores
             .entry(id_a)
             .or_insert_with(|| Box::new(DefaultStore::<A>::default()))
-            .as_store_mut::<A>()
+            .as_mut_store::<A>()
             .unwrap()
             .push(self.0);
 
@@ -39,7 +39,7 @@ where
         let position = stores
             .entry(id_b)
             .or_insert_with(|| Box::new(DefaultStore::<B>::default()))
-            .as_store_mut::<B>()
+            .as_mut_store::<B>()
             .unwrap()
             .push(self.1);
 
