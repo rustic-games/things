@@ -17,27 +17,6 @@ pub trait ComponentCollection {
     fn store(self, stores: &mut HashMap<TypeId, Box<ComponentStore>>) -> Vec<(TypeId, usize)>;
 }
 
-impl<A> ComponentCollection for (A,)
-where
-    A: Component,
-{
-    fn store(self, stores: &mut HashMap<TypeId, Box<ComponentStore>>) -> Vec<(TypeId, usize)> {
-        let mut references = Vec::new();
-        let id_a = TypeId::of::<A>();
-
-        let position = stores
-            .entry(id_a)
-            .or_insert_with(|| Box::new(DefaultStore::<A>::default()))
-            .as_store_mut::<A>()
-            .unwrap()
-            .push(self.0);
-
-        references.push((id_a, position));
-
-        references
-    }
-}
-
 impl<A, B> ComponentCollection for (A, B)
 where
     A: Component,
