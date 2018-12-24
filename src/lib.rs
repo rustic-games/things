@@ -42,10 +42,27 @@ pub struct Things {
     /// linking the components back to the entity.
     component_stores: HashMap<TypeId, Box<ComponentStore>>,
 
-    /// entity_component_references is a map of component locations, as they
-    /// relate to an entity. This map allows finding all components belonging to
-    /// a single entity.
-    entity_component_references: HashMap<Entity, Vec<(TypeId, usize)>>,
+    /// component_cursor keeps track of the next position in the stores where
+    /// the components of the next added entity should be stored. This is used
+    /// to keep the components aligned across their respective stores, to know
+    /// which components belong to a single `Entity`.
+    component_cursor: usize,
+
+    /// entity_component_references is a map of [`Component`] locations, as they
+    /// relate to an [`Entity`]. This map allows finding all components
+    /// belonging to a single entity.
+    ///
+    /// Because multiple components of the same type can belong to a single
+    /// entity, a record is kept of the maximum number of components of the same
+    /// type an entity has. The first [`usize`] is the position of the first
+    /// component of each type in the stores. The second [`usize`] is the
+    /// maximum number of components per type stored for this entity. If it is
+    /// `1`, then each component type is only used once for the entity. Anything
+    /// above 1 means that one or more component types are represented more than
+    /// one time. The store will then query "up to x" for each type, and get
+    /// back None if a type has reached its maximum members for the given
+    /// entity.
+    entity_component_references: HashMap<Entity, (usize, usize)>,
 }
 
 impl Default for Things {
@@ -59,14 +76,17 @@ impl Things {
         Things {
             entities: Arena::new(),
             component_stores: HashMap::default(),
+            component_cursor: 0,
             entity_component_references: HashMap::default(),
         }
     }
 
     pub fn create_entity<CC: ComponentCollection>(&mut self, components: CC) {
         let entity = Entity::from(self.entities.insert(()));
-        let references = components.store(&mut self.component_stores);
+        let result = components.store(&mut self.component_stores, self.component_cursor);
 
-        self.entity_component_references.insert(entity, references);
+        self.component_cursor += result.len;
+        self.entity_component_references
+            .insert(entity, (result.position, result.len));
     }
 }

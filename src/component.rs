@@ -14,7 +14,13 @@ impl<T> Component for T where T: 'static + Debug {}
 /// A collection of one or more components should implement this trait to be
 /// able to manipulate each individual component, or store them for later use.
 pub trait ComponentCollection {
-    fn store(self, stores: &mut HashMap<TypeId, Box<ComponentStore>>) -> Vec<(TypeId, usize)>;
+    fn store(self, stores: &mut HashMap<TypeId, Box<ComponentStore>>, cursor: usize)
+        -> StoreResult;
+}
+
+pub struct StoreResult {
+    pub position: usize,
+    pub len: usize,
 }
 
 impl<A, B> ComponentCollection for (A, B)
@@ -22,30 +28,46 @@ where
     A: Component,
     B: Component,
 {
-    fn store(self, stores: &mut HashMap<TypeId, Box<ComponentStore>>) -> Vec<(TypeId, usize)> {
-        let mut references = Vec::new();
+    fn store(
+        self,
+        stores: &mut HashMap<TypeId, Box<ComponentStore>>,
+        cursor: usize,
+    ) -> StoreResult {
         let id_a = TypeId::of::<A>();
         let id_b = TypeId::of::<B>();
 
-        let position = stores
+        let store = stores
             .entry(id_a)
             .or_insert_with(|| Box::new(DefaultStore::<A>::default()))
             .as_mut_store::<A>()
-            .unwrap()
-            .push(self.0);
+            .unwrap();
 
-        references.push((id_a, position));
+        let position_a = store.push(cursor, self.0);
 
-        let position = stores
+        let store = stores
             .entry(id_b)
             .or_insert_with(|| Box::new(DefaultStore::<B>::default()))
             .as_mut_store::<B>()
-            .unwrap()
-            .push(self.1);
+            .unwrap();
 
-        references.push((id_b, position));
+        let position_b = store.push(cursor, self.1);
 
-        references
+        // Take the lowest inserted position as the starting point for the
+        // components of this entity.
+        //
+        // If components `Position` and `Velocity` are inserted, then both will
+        // be at the same position, but if two `Position` components are stored
+        // for a single entity, one will come after the other, so we have to
+        // keep track of both the starting position in the store, and the count
+        // of the component which is used the most for this entity.
+        let position = std::cmp::min(position_a, position_b);
+        let len = if position_a == position_b {
+            1
+        } else {
+            std::cmp::max(position_a, position_b) - position
+        };
+
+        StoreResult { position, len }
     }
 }
 
