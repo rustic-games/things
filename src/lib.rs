@@ -24,7 +24,7 @@ mod system;
 pub use crate::{component::Component,
                 entity::Entity,
                 store::Store,
-                system::{Join, Read, System, Write}};
+                system::{Join, Query, Read, System, Write}};
 use crate::{component::ComponentCollection, store::ComponentStore};
 use generational_arena::Arena;
 use rustc_hash::FxHashMap as HashMap;
@@ -79,6 +79,12 @@ impl Things {
             component_cursor: 0,
             entity_component_references: HashMap::default(),
         }
+    }
+
+    pub fn execute_system<'a, S: System<'a>>(&'a mut self) {
+        let query = S::Query::iter(&self.component_stores);
+
+        S::update(query);
     }
 
     pub fn create_entity<CC: ComponentCollection>(&mut self, components: CC) {

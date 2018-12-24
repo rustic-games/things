@@ -1,5 +1,9 @@
-use crate::component::Component;
-use core::marker::PhantomData;
+use crate::{component::Component,
+            store::{ComponentStore, Store}};
+use core::{any::TypeId,
+           iter::{FilterMap, Zip},
+           marker::PhantomData};
+use rustc_hash::FxHashMap as HashMap;
 
 /// System must be implemented by any object that wants to interact with
 /// components. Objects implementing `System` are used to manipulate, and act on
@@ -8,53 +12,78 @@ use core::marker::PhantomData;
 /// The hierarchy of a system is as follows:
 ///
 /// System -> Query -> Join<Read/Write<Component>, StatementN...>
-pub trait System {
-    type Query: Query;
+pub trait System<'a> {
+    type Query: Query<'a>;
 
-    fn update(components: Self::Query);
+    fn update(components: <Self::Query as Query<'a>>::Iter);
 }
 
-/// A `Query` is a group of statements that determine on which components the
-/// system will operate.
-pub trait Query {}
-impl<T> Query for Join<T> {}
+/// A `Query` is a group of statements that determine on which set of components
+/// the system will operate.
+pub trait Query<'a> {
+    type Iter: Iterator;
 
-/// A `Statement` defines a single `Read` or `Write` action for a `Component`.
-pub trait Statement {
+    fn iter(store: &'a HashMap<TypeId, Box<ComponentStore>>) -> Self::Iter;
+}
+
+/// A `Statement` defines a single `Read` or `Write` action for a `Component`
+/// type. It is meant to return an iterator for that type.
+pub trait Statement<'a> {
     type Component: Component;
+    type Iter: ExactSizeIterator<Item = &'a Option<Self::Component>>;
+
+    fn find(store: &'a HashMap<TypeId, Box<ComponentStore>>) -> Self::Iter;
 }
 
 /// `Read` marks a `Component` within a `Query` as read-only.
-#[derive(Debug)]
-pub struct Read<C: Component>(PhantomData<C>);
+pub struct Read<C: Component>(C);
 
 /// `Write` marks a `Component` within a `Query` as read-and-write.
-#[derive(Debug)]
-pub struct Write<C: Component>(PhantomData<C>);
+pub struct Write<C: Component>(C);
 
-impl<C: Component> Statement for Read<C> {
+impl<'a, C: Component> Statement<'a> for Read<C> {
     type Component = C;
+    type Iter = std::slice::Iter<'a, Option<Self::Component>>;
+
+    fn find(store: &'a HashMap<TypeId, Box<ComponentStore>>) -> Self::Iter {
+        let id = TypeId::of::<C>();
+        if let Some(store) = store.get(&id) {
+            return store.as_store::<C>().unwrap().as_slice().iter();
+        }
+
+        (&[]).iter()
+    }
 }
 
-impl<C: Component> Statement for Write<C> {
-    type Component = C;
-}
-
-/// `Join` takes one or more `Statement`s, and joins all requested `Component`s
+/// `Join` takes a tuple of `Statement`s, and joins all requested `Component`s
 /// together to be used in an iterator.
 pub struct Join<T>(PhantomData<T>);
 
 // TODO: This is a temporary stub implementation for a `Query` consisting of a
 //       `Join` of two `Statement`s. In the future, this will be implemented for
 //       A..Z using a macro.
-impl<A, B> Iterator for Join<(A, B)>
+impl<'a, A, B> Query<'a> for Join<(A, B)>
 where
-    A: Statement,
-    B: Statement,
+    A: Statement<'a>,
+    B: Statement<'a>,
 {
-    type Item = (A::Component, B::Component);
+    // TODO: simplify type signature
+    #[allow(clippy::type_complexity)]
+    type Iter = FilterMap<
+        Zip<A::Iter, B::Iter>,
+        fn(
+            (&'a Option<A::Component>, &'a Option<B::Component>),
+        ) -> Option<(&'a A::Component, &'a B::Component)>,
+    >;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        None
+    fn iter(store: &'a HashMap<TypeId, Box<ComponentStore>>) -> Self::Iter {
+        let a = A::find(store);
+        let b = B::find(store);
+
+        a.zip(b)
+            .filter_map(|(a, b)| match (a.as_ref(), b.as_ref()) {
+                (Some(a), Some(b)) => Some((a, b)),
+                _ => None,
+            })
     }
 }
