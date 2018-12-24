@@ -14,6 +14,7 @@
 //! see: https://en.wikipedia.org/wiki/Entity–component–system
 
 #![cfg_attr(feature = "doc", feature(external_doc))]
+#![feature(vec_resize_default)]
 
 mod component;
 mod entity;

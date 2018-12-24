@@ -26,7 +26,7 @@ pub trait Store: Sized + Default + Debug {
     /// The `usize` value returned by the method indicates the position in the
     /// store at which the component is stored. This can be used to later
     /// retrieve a specific component from the store.
-    fn push(&mut self, component: Self::Item) -> usize;
+    fn push(&mut self, position: usize, component: Self::Item) -> usize;
 }
 
 pub trait ComponentStore: Downcast {}
@@ -43,9 +43,7 @@ impl ComponentStore {
 }
 
 #[derive(Debug)]
-pub struct DefaultStore<C: Component> {
-    data: Vec<C>,
-}
+pub struct DefaultStore<C: Component>(Vec<Option<C>>);
 
 impl<C: Component> ComponentStore for DefaultStore<C> {}
 
@@ -59,12 +57,23 @@ impl<C: Component> Store for DefaultStore<C> {
     type Item = C;
 
     fn new() -> Self {
-        Self { data: Vec::new() }
+        Self(Vec::new())
     }
 
-    fn push(&mut self, component: Self::Item) -> usize {
-        self.data.push(component);
-        self.data.len()
+    fn push(&mut self, position: usize, component: C) -> usize {
+        // A component is either pushed right after the last element, or one or
+        // more `None`s are pushed before the actual component is pushed.
+        if self.0.len() < position {
+            // This adds `None`s to all positions except the one where we want
+            // to store the pushed `Component`. This is the same as
+            // `resize(position, None)`, except that isn't allowed somehow,
+            // because it requires `Copy`.
+            self.0.resize_default(position);
+        }
+
+        self.0.push(Some(component));
+        self.0.len()
+    }
     }
 }
 
@@ -85,7 +94,7 @@ mod tests {
         type Item = C;
 
         fn new() -> Self { TestStore(PhantomData) }
-        fn push(&mut self, _: Self::Item) -> usize { 0 }
+        fn push(&mut self, _: usize, _: C) -> usize { 0 }
      }
 
     #[rustfmt::skip]
@@ -97,6 +106,6 @@ mod tests {
     fn test_implicit_component_trait() {
         let mut cs = TestStore::<C>::new();
 
-        assert_eq!(cs.push(C), 0);
+        assert_eq!(cs.push(0, C), 0);
     }
 }
