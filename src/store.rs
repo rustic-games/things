@@ -27,6 +27,24 @@ pub trait Store: Sized + Default + Debug {
     /// store at which the component is stored. This can be used to later
     /// retrieve a specific component from the store.
     fn push(&mut self, position: usize, component: Self::Item) -> usize;
+
+    /// Extracts a slice containing the entire vector.
+    ///
+    /// Since the store allows for "padding" to be inserted, to allow components
+    /// of the same entity to be aligned across different stores, the returned
+    /// values is of type `Option<Component>`. A `None` indicates that the
+    /// entity stored in that position does not contain the component type of
+    /// this store.
+    fn as_slice(&self) -> &[Option<Self::Item>];
+
+    /// Extracts a mutable slice of the entire vector.
+    ///
+    /// Since the store allows for "padding" to be inserted, to allow components
+    /// of the same entity to be aligned across different stores, the returned
+    /// values is of type `Option<Component>`. A `None` indicates that the
+    /// entity stored in that position does not contain the component type of
+    /// this store.
+    fn as_mut_slice(&mut self) -> &mut [Option<Self::Item>];
 }
 
 pub trait ComponentStore: Downcast {}
@@ -74,16 +92,22 @@ impl<C: Component> Store for DefaultStore<C> {
         self.0.push(Some(component));
         self.0.len()
     }
+
+    fn as_slice(&self) -> &[Option<C>] {
+        self.0.as_slice()
+    }
+
+    fn as_mut_slice(&mut self) -> &mut [Option<C>] {
+        self.0.as_mut_slice()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::marker::PhantomData;
 
     #[derive(Debug)]
-    struct TestStore<C: Component>(PhantomData<C>);
+    struct TestStore<C: Component>(Vec<Option<C>>);
     impl<C: Component> ComponentStore for TestStore<C> {}
 
     #[derive(Debug)]
@@ -93,8 +117,10 @@ mod tests {
     impl<C: Component> Store for TestStore<C> {
         type Item = C;
 
-        fn new() -> Self { TestStore(PhantomData) }
+        fn new() -> Self { TestStore(Vec::new()) }
         fn push(&mut self, _: usize, _: C) -> usize { 0 }
+        fn as_slice(&self) -> &[Option<C>] { self.0.as_slice() }
+        fn as_mut_slice(&mut self) -> &mut [Option<C>] { self.0.as_mut_slice() }
      }
 
     #[rustfmt::skip]
