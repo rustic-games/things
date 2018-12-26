@@ -1,8 +1,7 @@
 use crate::{component::Component,
             store::{ComponentStore, Store}};
 use core::{any::TypeId,
-           iter::{FilterMap, Zip},
-           marker::PhantomData};
+           iter::{FilterMap, Zip}};
 use rustc_hash::FxHashMap as HashMap;
 
 /// System must be implemented by any object that wants to interact with
@@ -55,14 +54,10 @@ impl<'a, C: Component> Statement<'a> for Read<C> {
     }
 }
 
-/// `Join` takes a tuple of `Statement`s, and joins all requested `Component`s
-/// together to be used in an iterator.
-pub struct Join<T>(PhantomData<T>);
-
 // TODO: This is a temporary stub implementation for a `Query` consisting of a
 //       `Join` of two `Statement`s. In the future, this will be implemented for
 //       A..Z using a macro.
-impl<'a, A, B> Query<'a> for Join<(A, B)>
+impl<'a, A, B> Query<'a> for (A, B)
 where
     A: Statement<'a>,
     B: Statement<'a>,
