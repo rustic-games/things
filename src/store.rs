@@ -1,6 +1,7 @@
 use crate::Component;
 use core::fmt::Debug;
 use downcast_rs::{impl_downcast, Downcast};
+use std::cell::UnsafeCell;
 
 /// `Store` must be implemented by any object that wants to store
 /// [`Component`]s.
@@ -44,7 +45,7 @@ pub trait Store: Sized + Default + Debug {
     /// values is of type `Option<Component>`. A `None` indicates that the
     /// entity stored in that position does not contain the component type of
     /// this store.
-    fn as_mut_slice(&mut self) -> &mut [Option<Self::Item>];
+    unsafe fn as_mut_slice(&self) -> &mut [Option<Self::Item>];
 }
 
 pub trait ComponentStore: Downcast {}
@@ -61,7 +62,7 @@ impl ComponentStore {
 }
 
 #[derive(Debug)]
-pub struct DefaultStore<C: Component>(Vec<Option<C>>);
+pub struct DefaultStore<C: Component>(UnsafeCell<Vec<Option<C>>>);
 
 impl<C: Component> ComponentStore for DefaultStore<C> {}
 
@@ -75,30 +76,34 @@ impl<C: Component> Store for DefaultStore<C> {
     type Item = C;
 
     fn new() -> Self {
-        Self(Vec::new())
+        Self(UnsafeCell::new(Vec::new()))
     }
 
     fn push(&mut self, position: usize, component: C) -> usize {
+        let store = unsafe { &mut (*self.0.get()) };
+
         // A component is either pushed right after the last element, or one or
         // more `None`s are pushed before the actual component is pushed.
-        if self.0.len() < position {
+        if store.len() < position {
             // This adds `None`s to all positions except the one where we want
             // to store the pushed `Component`. This is the same as
             // `resize(position, None)`, except that isn't allowed somehow,
             // because it requires `Copy`.
-            self.0.resize_default(position);
+            store.resize_default(position);
         }
 
-        self.0.push(Some(component));
-        self.0.len()
+        store.push(Some(component));
+        store.len()
     }
 
     fn as_slice(&self) -> &[Option<C>] {
-        self.0.as_slice()
+        let store = unsafe { &(*self.0.get()) };
+        store.as_slice()
     }
 
-    fn as_mut_slice(&mut self) -> &mut [Option<C>] {
-        self.0.as_mut_slice()
+    unsafe fn as_mut_slice(&self) -> &mut [Option<C>] {
+        let store = &mut (*self.0.get());
+        store.as_mut_slice()
     }
 }
 
@@ -107,7 +112,7 @@ mod tests {
     use super::*;
 
     #[derive(Debug)]
-    struct TestStore<C: Component>(Vec<Option<C>>);
+    struct TestStore<C: Component>(UnsafeCell<Vec<Option<C>>>);
     impl<C: Component> ComponentStore for TestStore<C> {}
 
     #[derive(Debug)]
@@ -117,10 +122,10 @@ mod tests {
     impl<C: Component> Store for TestStore<C> {
         type Item = C;
 
-        fn new() -> Self { TestStore(Vec::new()) }
+        fn new() -> Self { TestStore(UnsafeCell::new(Vec::new())) }
         fn push(&mut self, _: usize, _: C) -> usize { 0 }
-        fn as_slice(&self) -> &[Option<C>] { self.0.as_slice() }
-        fn as_mut_slice(&mut self) -> &mut [Option<C>] { self.0.as_mut_slice() }
+        fn as_slice(&self) -> &[Option<C>] { unsafe { &(*self.0.get()) }.as_slice() }
+        unsafe fn as_mut_slice(&self) -> &mut [Option<C>] { { &mut (*self.0.get()) }.as_mut_slice() }
      }
 
     #[rustfmt::skip]
