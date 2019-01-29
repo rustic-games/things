@@ -16,17 +16,22 @@
 #![cfg_attr(feature = "doc", feature(external_doc))]
 #![feature(vec_resize_default)]
 
+mod borrow;
 mod component;
 mod entity;
 mod store;
 mod system;
 
-pub use crate::{component::Component,
+pub use crate::{borrow::BorrowError,
+                component::Component,
                 entity::Entity,
                 store::Store,
                 system::{Query, Read, System, Write}};
-use crate::{component::ComponentCollection, store::ComponentStore};
+use crate::{borrow::{RegisterBorrow, RuntimeBorrow},
+            component::ComponentCollection,
+            store::ComponentStore};
 use generational_arena::Arena;
+use parking_lot::Mutex;
 use rustc_hash::FxHashMap as HashMap;
 use std::any::TypeId;
 
@@ -63,6 +68,8 @@ pub struct Things {
     /// back None if a type has reached its maximum members for the given
     /// entity.
     entity_component_references: HashMap<Entity, (usize, usize)>,
+
+    runtime_borrow: Mutex<RuntimeBorrow>,
 }
 
 impl Default for Things {
@@ -78,13 +85,21 @@ impl Things {
             component_stores: HashMap::default(),
             component_cursor: 0,
             entity_component_references: HashMap::default(),
+            runtime_borrow: Mutex::new(RuntimeBorrow::new()),
         }
     }
 
-    pub fn execute_system<'a, S: System<'a>>(&'a mut self) {
+    pub fn execute_system<'a, S: System<'a>>(&'a mut self) -> Result<(), BorrowError>
+    where
+        S::Query: Query<'a>,
+        <S::Query as Query<'a>>::Borrow: RegisterBorrow,
+    {
+        self.borrow_and_validate::<<S::Query as Query<'a>>::Borrow>()?;
+
         let query = S::Query::iter(&self.component_stores);
 
         S::update(query);
+        Ok(())
     }
 
     pub fn create_entity<CC: ComponentCollection>(&mut self, components: CC) {
@@ -94,5 +109,11 @@ impl Things {
         self.component_cursor += result.len;
         self.entity_component_references
             .insert(entity, (result.position, result.len));
+    }
+
+    fn borrow_and_validate<Borrow: RegisterBorrow>(&self) -> Result<(), BorrowError> {
+        let mut borrow = self.runtime_borrow.lock();
+        borrow.push_access::<Borrow>()?;
+        borrow.validate()
     }
 }

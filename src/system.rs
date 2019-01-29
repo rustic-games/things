@@ -16,6 +16,7 @@ pub trait System<'a> {
 /// A `Query` is a group of statements that determine on which set of components
 /// the system will operate.
 pub trait Query<'a> {
+    type Borrow;
     type Iter: Iterator;
 
     fn iter(store: &'a HashMap<TypeId, Box<ComponentStore>>) -> Self::Iter;
@@ -84,6 +85,7 @@ where
     A: Component,
     B: Component,
 {
+    type Borrow = Self;
     type Iter = FilterMap<
         Zip<<Read<A> as Reader<'a>>::Iter, <Write<B> as Writer<'a>>::Iter>,
         fn((&'a Option<A>, &'a mut Option<B>)) -> Option<(&'a A, &'a mut B)>,
@@ -109,6 +111,7 @@ where
     A: Component,
     B: Component,
 {
+    type Borrow = Self;
     type Iter = FilterMap<
         Zip<<Read<A> as Reader<'a>>::Iter, <Read<B> as Reader<'a>>::Iter>,
         fn((&'a Option<A>, &'a Option<B>)) -> Option<(&'a A, &'a B)>,

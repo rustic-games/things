@@ -13,3 +13,4 @@ doc = []
 generational-arena = "0.2"
 downcast-rs = "1.0.3"
 rustc-hash = "1.0"
+parking_lot = "0.7.1"
